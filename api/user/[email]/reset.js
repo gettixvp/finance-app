@@ -1,34 +1,31 @@
-// api/user/[email]/reset.js
-const { getPool, ensureInit } = require("../../../lib/db")
+// api/user/reset.js
+const { getPool, ensureInit } = require("../../../lib/db");
 
-module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end()
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" })
-  }
+  await ensureInit();
+  const pool = getPool();
+  const client = await pool.connect();
+  const { email } = req.body;
 
-  await ensureInit()
-  const pool = getPool()
-
-  const { email } = req.query
-
-  if (!email) {
-    return res.status(400).json({ error: "Email обязателен" })
-  }
+  if (!email) return res.status(400).json({ error: "Email обязателен" });
 
   try {
-    await pool.query("DELETE FROM transactions WHERE user_email = $1", [email])
-    await pool.query(`UPDATE users SET balance=0, income=0, expenses=0, savings_usd=0 WHERE email=$1`, [email])
-    res.json({ success: true })
+    await client.query("BEGIN");
+    await client.query("DELETE FROM transactions WHERE user_email = $1", [email]);
+    await client.query("UPDATE users SET balance=0, income=0, expenses=0, savings_usd=0 WHERE email=$1", [email]);
+    await client.query("COMMIT");
+    res.json({ success: true });
   } catch (e) {
-    console.error("Reset error:", e)
-    res.status(500).json({ error: "Не удалось сбросить: " + e.message })
+    await client.query("ROLLBACK");
+    console.error("Reset error:", e);
+    res.status(500).json({ error: "Ошибка сброса" });
+  } finally {
+    client.release();
   }
 }
