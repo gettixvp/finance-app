@@ -26,7 +26,7 @@ import { Pie } from "react-chartjs-2"
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-const API_BASE = "https://walletback-aghp.onrender.com"
+const API_BASE = ""
 const LS_KEY = "finance_settings_v3"
 const SESSION_KEY = "finance_session_v2"
 
