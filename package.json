@@ -1,5 +1,5 @@
 {
-  "name": "finance-app",
+  "name": "wallet-app",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -9,9 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "lucide-react": "^0.447.0",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.4.4",
+    "lucide-react": "^0.447.0",
     "next": "^14.2.13",
     "pg": "^8.12.0",
     "react": "^18.3.1",
@@ -21,6 +21,8 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13"
   }
