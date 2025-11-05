@@ -1,5 +1,5 @@
 // api/auth.js
-const bcrypt = require("bcryptjs"); // bcryptjs — безопасно для Vercel
+const bcrypt = require("bcryptjs");
 const { getPool, ensureInit } = require("../../lib/db");
 
 const convertUser = (u) => ({
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
     res.json({ user: convertUser(user), transactions: tx });
   } catch (e) {
     console.error("Auth error:", e);
-    res.status(500).json({ error: "Ошибка сервера" });
+    res.status(500).json({ error: "Ошибка сервера: " + e.message });
   } finally {
     client.release();
   }
