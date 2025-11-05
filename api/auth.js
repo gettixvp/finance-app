@@ -25,28 +25,48 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  await ensureInit();
-  const pool = getPool();
-  const client = await pool.connect();
-
-  const { email, password, first_name, telegram_id, telegram_name, currency = "BYN" } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ error: "Email обязателен" });
-  }
-
   try {
-    const existing = await client.query("SELECT * FROM users WHERE email = $1", [email]);
+    await ensureInit();
+    const pool = getPool();
+    const client = await pool.connect(); // ✅ ИСПРАВЛЕНО: добавлен await
 
-    if (existing.rows.length === 0) {
-      // Регистрация
-      const password_hash = password ? await bcrypt.hash(password, 10) : null;
-      const userResult = await client.query(
-        `INSERT INTO users (email, password_hash, first_name, balance, income, expenses, savings_usd, goal_savings, currency)
-         VALUES ($1, $2, $3, 0, 0, 0, 0, 50000, $4) RETURNING *`,
-        [email, password_hash, first_name || email.split("@")[0], currency]
-      );
-      const user = userResult.rows[0];
+    try {
+      const { email, password, first_name, telegram_id, telegram_name, currency = "BYN" } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email обязателен" });
+      }
+
+      const existing = await client.query("SELECT * FROM users WHERE email = $1", [email]);
+
+      if (existing.rows.length === 0) {
+        // Регистрация
+        const password_hash = password ? await bcrypt.hash(password, 10) : null;
+        const userResult = await client.query(
+          `INSERT INTO users (email, password_hash, first_name, balance, income, expenses, savings_usd, goal_savings, currency)
+           VALUES ($1, $2, $3, 0, 0, 0, 0, 50000, $4) RETURNING *`,
+          [email, password_hash, first_name || email.split("@")[0], currency]
+        );
+        const user = userResult.rows[0];
+
+        if (telegram_id && telegram_name) {
+          await client.query(
+            `INSERT INTO linked_telegram_users (user_email, telegram_id, telegram_name)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (user_email, telegram_id) DO UPDATE SET telegram_name = $3`,
+            [email, telegram_id, telegram_name]
+          );
+        }
+
+        return res.json({ user: convertUser(user), transactions: [] });
+      }
+
+      // Вход
+      const user = existing.rows[0];
+      if (user.password_hash && password) {
+        const ok = await bcrypt.compare(password, user.password_hash);
+        if (!ok) return res.status(401).json({ error: "Неверный пароль" });
+      }
 
       if (telegram_id && telegram_name) {
         await client.query(
@@ -57,32 +77,14 @@ module.exports = async (req, res) => {
         );
       }
 
-      return res.json({ user: convertUser(user), transactions: [] });
+      const tx = await client.query("SELECT * FROM transactions WHERE user_email = $1 ORDER BY date DESC", [email]);
+
+      res.json({ user: convertUser(user), transactions: tx.rows });
+    } finally {
+      client.release(); // ✅ Всегда освобождаем соединение
     }
-
-    // Вход
-    const user = existing.rows[0];
-    if (user.password_hash && password) {
-      const ok = await bcrypt.compare(password, user.password_hash);
-      if (!ok) return res.status(401).json({ error: "Неверный пароль" });
-    }
-
-    if (telegram_id && telegram_name) {
-      await client.query(
-        `INSERT INTO linked_telegram_users (user_email, telegram_id, telegram_name)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_email, telegram_id) DO UPDATE SET telegram_name = $3`,
-        [email, telegram_id, telegram_name]
-      );
-    }
-
-    const tx = await client.query("SELECT * FROM transactions WHERE user_email = $1 ORDER BY date DESC", [email]);
-
-    res.json({ user: convertUser(user), transactions: tx.rows });
   } catch (e) {
     console.error("Auth error:", e);
     res.status(500).json({ error: "Ошибка сервера: " + e.message });
-  } finally {
-    client.release();
   }
 };

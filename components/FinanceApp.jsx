@@ -440,12 +440,46 @@ export default function FinanceApp({ apiUrl = API_BASE }) {
   const [linkedUsers, setLinkedUsers] = useState([])
   const [showLinkedUsers, setShowLinkedUsers] = useState(false)
 
-  const tg = typeof window !== "undefined" && window.Telegram && window.Telegram.WebApp
-  const haptic = tg && tg.HapticFeedback
-  const vibrate = () => haptic && haptic.impactOccurred && haptic.impactOccurred("light")
-  const vibrateSuccess = () => haptic && haptic.notificationOccurred && haptic.notificationOccurred("success")
-  const vibrateError = () => haptic && haptic.notificationOccurred && haptic.notificationOccurred("error")
-  const vibrateSelect = () => haptic && haptic.selectionChanged && haptic.selectionChanged()
+  const tg = typeof window !== "undefined" && window.Telegram?.WebApp
+  const vibrate = () => {
+  if (tg?.HapticFeedback?.impactOccurred) {
+    try {
+      tg.HapticFeedback.impactOccurred("light");
+    } catch (e) {
+      console.warn("Vibration failed:", e);
+    }
+  }
+};
+
+  const vibrateSuccess = () => {
+  if (tg?.HapticFeedback?.notificationOccurred) {
+    try {
+      tg.HapticFeedback.notificationOccurred("success");
+    } catch (e) {
+      console.warn("Vibration failed:", e);
+    }
+  }
+};
+
+  const vibrateError = () => {
+  if (tg?.HapticFeedback?.notificationOccurred) {
+    try {
+      tg.HapticFeedback.notificationOccurred("error");
+    } catch (e) {
+      console.warn("Vibration failed:", e);
+    }
+  }
+};
+
+  const vibrateSelect = () => {
+  if (tg?.HapticFeedback?.selectionChanged) {
+    try {
+      tg.HapticFeedback.selectionChanged();
+    } catch (e) {
+      console.warn("Vibration failed:", e);
+    }
+  }
+};
 
   const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user
   const tgUserId = tgUser && tgUser.id
