@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   if (!email) return res.status(400).json({ error: "Email обязателен" });
 
   try {
-    awaitJSON client.query(
+    await client.query(
       `UPDATE users SET 
        balance = $1, income = $2, expenses = $3, 
        savings_usd = $4, goal_savings = $5, currency = $6
